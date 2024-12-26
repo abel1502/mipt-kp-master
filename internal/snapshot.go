@@ -10,16 +10,19 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
+// AzureContainerBackup allows to back up snapshots of individual blobs or a whole container
 type AzureContainerBackup struct {
 	containerClient *container.Client
 }
 
+// NewAzureContainerBackup creates an AzureContainerBackup from a container client
 func NewAzureContainerBackup(containerClient *container.Client) *AzureContainerBackup {
 	return &AzureContainerBackup{
 		containerClient,
 	}
 }
 
+// NewDefaultAzureContainerBackup creates an AzureContainerBackup from a container name using the default credentials
 func NewDefaultAzureContainerBackup(containerName string) (*AzureContainerBackup, error) {
 	defaultCred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
@@ -42,6 +45,7 @@ func sanitizeName(blobName string) string {
 	return strings.NewReplacer("/", "_", ".", "_").Replace(blobName)
 }
 
+// BackupBlob creates a snapshot of a blob, downloads it and optionally cleans up the snapshot
 func (a *AzureContainerBackup) BackupBlob(ctx context.Context, blobName string, fileName string, keepSnapshot bool) error {
 	blobClient := a.containerClient.NewBlobClient(blobName)
 
@@ -79,6 +83,7 @@ func (a *AzureContainerBackup) BackupBlob(ctx context.Context, blobName string, 
 	return nil
 }
 
+// BackupAll creates snapshots of all blobs in the container, downloads them and optionally cleans up the snapshots
 func (a *AzureContainerBackup) BackupAll(ctx context.Context, dirName string, keepSnapshots bool) error {
 	blobPager := a.containerClient.NewListBlobsFlatPager(nil)
 
