@@ -9,8 +9,8 @@ import (
 
 func main() {
 	var containerName = flag.String("container", "mycontainer", "Container name")
-	var blobName = flag.String("blob", "myblob", "Blob name")
-	var keepSnapshot = flag.Bool("keep", false, "Keep snapshot in cloud")
+	var blobName = flag.String("blob", "", "Blob name (empty for whole container backup)")
+	var keepSnapshot = flag.Bool("keep", false, "Keep snapshot(s) in cloud")
 	flag.Parse()
 
 	err := doMain(*containerName, *blobName, *keepSnapshot)
@@ -29,9 +29,16 @@ func doMain(
 		return err
 	}
 
-	err = backup.BackupBlob(context.Background(), blobName, "", keepSnapshot)
-	if err != nil {
-		return err
+	if blobName != "" {
+		err := backup.BackupBlob(context.Background(), blobName, "", keepSnapshot)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := backup.BackupAll(context.Background(), containerName, keepSnapshot)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
