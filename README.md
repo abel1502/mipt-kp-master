@@ -1,4 +1,4 @@
-# mipt-kp-m-test
-My solution to the test assignment set by my supervisor for my Master's diploma.
+# mipt-kp-master
+My Master's diploma project at CyberProtect 
 
-The task is to create snapshots of azure blob storage items and download them.
+The goal is to implement efficient backups of azure blob storage.
