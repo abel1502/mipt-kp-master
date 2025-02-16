@@ -1,3 +1,5 @@
+# Notes on blobs
+
 - Current implementation needs to be reworked a lot, since I had many wrong
   assumptions about azure blob storage initially.
 - We could use event grids to track extensively what changes occur to what
@@ -39,4 +41,9 @@
 - Blobs retain some information about being copied via Azure's inbuilt means.
   This may be useful for incremental backups.
 
+# TODO
 
+- Write the text in Typst in this repository (compile locally), so that we have
+  a diff of it.
+- Prepare for the MIPT conference. Ideally want to have working code this week.
+- The next step would be to deduplicate beyond azure-level fragments.
