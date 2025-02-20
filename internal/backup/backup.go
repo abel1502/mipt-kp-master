@@ -4,50 +4,19 @@ import (
 	"time"
 )
 
-type BlobData struct {
-	// Name is the name of the blob
-	Name string
-	// Type is the blob type (append/block/page)
-	Type BlobType
-	// CreatedAt is the time at which the original blob was created.
-	// Used for detecting full overwrites
-	CreatedAt time.Time
-	// SavedAt is the time at which this blob backup was taken
-	SavedAt time.Time
-	// ValidAt is the time of last check which confirmed the blob remained
-	// since SavedAt
-	ValidAt time.Time
-	// DeletedAt is the time at which a blob was deleted, or nil if it is still up
-	DeletedAt *time.Time
-	// Metadata is the blob metadata
-	Metadata map[string]string
-	// ContentMD5 is the MD5 hash of the blob content
-	ContentMD5 []byte
-	// Content is the blob's content, possibly stored incrementally
-	Content BackedUpContent
-}
-
-type BackedUpContent interface {
-	ExplicitData(blob *BlobData) []byte
-}
-
-type ContainerData struct {
+type Snapshot struct {
 	// SavedAt is the time at which this container backup was taken
 	SavedAt time.Time
 	// Blobs is the list of all blobs included in this backup
-	Blobs []BlobData
-	// Parent is the previous backup, upon which this one may rely
-	// to save storage space using incremental representations of changes
-	Parent *ContainerData
+	Blobs []Blob
 }
 
-type BlobType string
-
-const (
-	BlobTypeAppendBlob BlobType = "AppendBlob"
-	BlobTypeBlockBlob  BlobType = "BlockBlob"
-	BlobTypePageBlob   BlobType = "PageBlob"
-)
+type Repository struct {
+	// Revisions are the container snapshots in the chronological order.
+	// Note that different revisions in a repository might share some
+	// of the blob content pieces.
+	Revisions []Snapshot
+}
 
 /*
 const metadataFile string = "metadata.json"
