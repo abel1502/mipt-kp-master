@@ -1,6 +1,6 @@
 module github.com/abel1502/mipt-kp-m-test
 
-go 1.22.0
+go 1.24
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0 // indirect
