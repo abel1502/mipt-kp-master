@@ -1,7 +1,10 @@
 package backup
 
 import (
+	"context"
 	"time"
+
+	"github.com/abel1502/mipt-kp-m-test/internal/azure"
 )
 
 type Snapshot struct {
@@ -12,10 +15,49 @@ type Snapshot struct {
 }
 
 type Repository struct {
+	// ContainerURL is the URL of the container to back up
+	ContainerURL string
 	// Revisions are the container snapshots in the chronological order.
 	// Note that different revisions in a repository might share some
 	// of the blob content pieces.
 	Revisions []Snapshot
+}
+
+func NewRepository(containerURL string) *Repository {
+	return &Repository{
+		ContainerURL: containerURL,
+		Revisions:    nil,
+	}
+}
+
+func (r *Repository) TakeSnapshot(ctx context.Context) error {
+	client, err := azure.OpenClient(r.ContainerURL)
+	if err != nil {
+		return err
+	}
+
+	onlineSnapshot, err := azure.TakeSnapshot(ctx, client)
+
+	// TODO
+	blobs := make([]Blob, 0, len(onlineSnapshot.Blobs))
+
+	for _, blob := range onlineSnapshot.Blobs {
+		// TODO: Also compare LastModified against TakenAt
+		blobs = append(blobs, backupBlob(blob))
+	}
+
+	r.Revisions = append(r.Revisions, Snapshot{
+		SavedAt: onlineSnapshot.TakenAt,
+		Blobs:   blobs,
+	})
+
+	return nil
+}
+
+// TODO: More arguments, to enable incrementality based on previous revisions
+func backupBlob(blob azure.BlobInfo) Blob {
+	// TODO
+	return nil
 }
 
 /*
