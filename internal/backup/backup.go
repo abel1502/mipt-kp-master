@@ -38,12 +38,22 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 
 	onlineSnapshot, err := azure.TakeSnapshot(ctx, client)
 
+	oldBlobLookup := make(map[string]*Blob)
+	if len(r.Revisions) > 0 {
+		lastRevision := &r.Revisions[len(r.Revisions)-1]
+
+		for _, blob := range lastRevision.Blobs {
+			// TODO: This may be wrong -- if so, do &lastRevision.Blobs[i] instead
+			oldBlobLookup[blob.Common().Name] = &blob
+		}
+	}
+
 	// TODO
 	blobs := make([]Blob, 0, len(onlineSnapshot.Blobs))
 
 	for _, blob := range onlineSnapshot.Blobs {
 		// TODO: Also compare LastModified against TakenAt
-		blobs = append(blobs, backupBlob(blob))
+		blobs = append(blobs, backupBlob(blob, oldBlobLookup[blob.Name]))
 	}
 
 	r.Revisions = append(r.Revisions, Snapshot{
@@ -54,8 +64,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	return nil
 }
 
-// TODO: More arguments, to enable incrementality based on previous revisions
-func backupBlob(blob azure.BlobInfo) Blob {
+func backupBlob(newBlob azure.BlobInfo, oldBlob *Blob) Blob {
 	// TODO
 	return nil
 }

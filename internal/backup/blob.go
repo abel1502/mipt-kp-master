@@ -10,6 +10,7 @@ import (
 
 type Blob interface {
 	Type() BlobType
+	Common() *CommonBlob
 }
 
 type BlobType string
@@ -52,6 +53,10 @@ func (*BlockBlob) Type() BlobType {
 	return BlobTypeBlock
 }
 
+func (b *BlockBlob) Common() *CommonBlob {
+	return &b.CommonBlob
+}
+
 type BlockBlobFragment struct {
 	// ID is the base64-encoded block ID
 	ID string
@@ -69,6 +74,10 @@ func (*AppendBlob) Type() BlobType {
 	return BlobTypeAppend
 }
 
+func (a *AppendBlob) Common() *CommonBlob {
+	return &a.CommonBlob
+}
+
 type AppendBlobFragment struct {
 	// LastChunk is the last chunk of this blob
 	LastChunk []byte
@@ -84,6 +93,10 @@ type PageBlob struct {
 
 func (*PageBlob) Type() BlobType {
 	return BlobTypePage
+}
+
+func (p *PageBlob) Common() *CommonBlob {
+	return &p.CommonBlob
 }
 
 // TODO: Support clearing parts in the middle of a page range?
