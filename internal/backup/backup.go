@@ -2,8 +2,11 @@ package backup
 
 import (
 	"context"
+	"slices"
 	"time"
 
+	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/abel1502/mipt-kp-m-test/internal/azure"
 )
 
@@ -37,14 +40,15 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	}
 
 	onlineSnapshot, err := azure.TakeSnapshot(ctx, client)
+	defer onlineSnapshot.Delete(ctx) // TODO: Other context?
 
-	oldBlobLookup := make(map[string]*Blob)
+	oldBlobLookup := make(map[string]Blob)
 	if len(r.Revisions) > 0 {
 		lastRevision := &r.Revisions[len(r.Revisions)-1]
 
 		for _, blob := range lastRevision.Blobs {
 			// TODO: This may be wrong -- if so, do &lastRevision.Blobs[i] instead
-			oldBlobLookup[blob.Common().Name] = &blob
+			oldBlobLookup[blob.Common().Name] = blob
 		}
 	}
 
@@ -53,7 +57,11 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 
 	for _, blob := range onlineSnapshot.Blobs {
 		// TODO: Also compare LastModified against TakenAt
-		blobs = append(blobs, backupBlob(blob, oldBlobLookup[blob.Name]))
+		newBlob, err := backupBlob(ctx, client, blob, oldBlobLookup[blob.Name])
+		if err != nil {
+			return err
+		}
+		blobs = append(blobs, newBlob)
 	}
 
 	r.Revisions = append(r.Revisions, Snapshot{
@@ -64,87 +72,50 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	return nil
 }
 
-func backupBlob(newBlob azure.BlobInfo, oldBlob *Blob) Blob {
-	// TODO
-	return nil
-}
-
-/*
-const metadataFile string = "metadata.json"
-
-// Open opens an existing backup directory
-func Open(root string) (*BackupDir, error) {
-	mdPath := path.Join(root, metadataFile)
-	mdFile, err := os.Open(mdPath)
-	if err != nil {
-		return nil, err
-	}
-	defer mdFile.Close()
-
-	b := &BackupDir{
-		Root: root,
-	}
-
-	err = json.NewDecoder(mdFile).Decode(&b.Metadata)
+// Note: oldBlob may be nil, meaning this blob hasn't been backed up in the last revision
+func backupBlob(ctx context.Context, client *azcontainer.Client, newBlob azure.BlobInfo, oldBlob Blob) (Blob, error) {
+	newBlobClient, err := client.NewBlobClient(newBlob.Name).WithSnapshot(newBlob.Snapshot)
 	if err != nil {
 		return nil, err
 	}
 
-	return b, nil
-}
-
-// New creates a BackupDir for a given container.
-// Note that by default the backup is empty (equivalent to T-infinity),
-// and you need to call PullChanges to populate it
-func New(containerURL string, root string) (*BackupDir, error) {
-	// TODO
-	return nil, nil
-}
-
-// Flush saves the metadata to disk.
-func (b *BackupDir) Flush() error {
-	mdPath := path.Join(b.Root, metadataFile)
-	mdFile, err := os.Create(mdPath)
+	newProps, err := newBlobClient.GetProperties(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer mdFile.Close()
 
-	return json.NewEncoder(mdFile).Encode(b.Metadata)
+	// There are three options here:
+
+	// 1. The blob is created fresh.
+	//    The old one is either overwritten (different creation time)
+	//    or didn't exist (nil)
+	if oldBlob == nil || (oldBlob.Common().Timestamps.CreatedAt != *newProps.CreationTime) {
+		blob, err := blobFullDownload(ctx, newBlobClient)
+		return blob, err
+	}
+
+	// 2. The blob is unchanged since last time.
+	// TODO: This doesn't account for changed metadata! Perhaps also see LastModified?
+	if slices.Equal(oldBlob.Common().ContentMD5, newProps.ContentMD5) {
+		blob := oldBlob.ShallowClone()
+		return blob, nil
+	}
+
+	// 3. The blob is updated in a known way
+	blob, err := blobIncrementalDownload(ctx, newBlobClient, oldBlob)
+	return blob, err
 }
 
-// TODO: Maybe remove?
-func (b *BackupDir) Close() {
-	_ = b.Flush()
-}
-
-// NewIncrement creates a new incremental backup based on this one.
-// Note that by default the new backup is empty, and you need to
-// call PullChanges to populate it
-func (b *BackupDir) NewIncrement(root string) (*BackupDir, error) {
+func blobFullDownload(ctx context.Context, blobClient *azblob.Client) (Blob, error) {
 	// TODO
+	panic("not implemented")
+
 	return nil, nil
 }
 
-// Clone creates a new backup identical to this one.
-func (b *BackupDir) Clone(root string) (*BackupDir, error) {
+func blobIncrementalDownload(ctx context.Context, blobClient *azblob.Client, oldBlob Blob) (Blob, error) {
 	// TODO
+	panic("not implemented")
+
 	return nil, nil
 }
-
-// PullChanges incorporates any changes from the container
-// made since the currently saved timestamp. Note that this
-// updates the existing backup; if you wish to preserve the
-// original, either clone it or use NewIncrement.
-func (b *BackupDir) PullChanges() error {
-	// TODO
-	return nil
-}
-
-// MergeHistory turns an incremental backup into a full one
-// by incorporating all the changes since the last full backup
-func (b *BackupDir) MergeHistory() error {
-	// TODO
-	return nil
-}
-*/

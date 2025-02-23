@@ -11,6 +11,7 @@ import (
 type Blob interface {
 	Type() BlobType
 	Common() *CommonBlob
+	ShallowClone() Blob
 }
 
 type BlobType string
@@ -41,72 +42,4 @@ type CommonBlob struct {
 	Metadata map[string]string
 	// Properties are the blob properties
 	Properties container.BlobProperties // TODO: Remove?
-}
-
-type BlockBlob struct {
-	CommonBlob
-	// Fragments is the list of blocks that make up the blob
-	Fragments []*BlockBlobFragment
-}
-
-func (*BlockBlob) Type() BlobType {
-	return BlobTypeBlock
-}
-
-func (b *BlockBlob) Common() *CommonBlob {
-	return &b.CommonBlob
-}
-
-type BlockBlobFragment struct {
-	// ID is the base64-encoded block ID
-	ID string
-	// Content is the block data
-	Content []byte
-}
-
-type AppendBlob struct {
-	CommonBlob
-	// Fragments is the single-linked list of this blob's fragments
-	Fragments *AppendBlobFragment
-}
-
-func (*AppendBlob) Type() BlobType {
-	return BlobTypeAppend
-}
-
-func (a *AppendBlob) Common() *CommonBlob {
-	return &a.CommonBlob
-}
-
-type AppendBlobFragment struct {
-	// LastChunk is the last chunk of this blob
-	LastChunk []byte
-	// Previous is the preceding fragment
-	Previous *AppendBlobFragment
-}
-
-type PageBlob struct {
-	CommonBlob
-	// Fragments is the list of this blob's pages
-	Fragments []*PageBlobFragment
-}
-
-func (*PageBlob) Type() BlobType {
-	return BlobTypePage
-}
-
-func (p *PageBlob) Common() *CommonBlob {
-	return &p.CommonBlob
-}
-
-// TODO: Support clearing parts in the middle of a page range?
-// We don't always want to keep the entire history, though.
-// For that scenario, I'll need
-type PageBlobFragment struct {
-	// Offset is the fragment offset (512-bytes-aligned)
-	Offset uint64
-	// Content is the fragment data (512-bytes-aligned in size)
-	Content []byte
-	// ContentMD5 is the MD5 hash of the fragment
-	ContentMD5 []byte
 }
