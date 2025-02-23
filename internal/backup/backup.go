@@ -72,6 +72,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	return nil
 }
 
+// TODO: Naming might be confusing here, maybe refactor
 // Note: oldBlob may be nil, meaning this blob hasn't been backed up in the last revision
 func backupBlob(ctx context.Context, client *azcontainer.Client, newBlob azure.BlobInfo, oldBlob Blob) (Blob, error) {
 	newBlobClient, err := client.NewBlobClient(newBlob.Name).WithSnapshot(newBlob.Snapshot)
