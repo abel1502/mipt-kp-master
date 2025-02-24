@@ -37,15 +37,17 @@ func DownloadBlockBlob(
 		return nil, err
 	}
 
+	commonBlob, err := downloadCommon(ctx, *client.BlobClient())
+	if err != nil {
+		return nil, err
+	}
+
 	blob := &BlockBlob{
-		CommonBlob: CommonBlob{
-			// TODO: Get from azure!
-		},
-		Fragments: make([]*BlockBlobFragment, 0, len(blockList.CommittedBlocks)),
+		CommonBlob: *commonBlob,
+		Fragments:  make([]*BlockBlobFragment, 0, len(blockList.CommittedBlocks)),
 	}
 
 	knownFragments := make(map[string]*BlockBlobFragment)
-
 	if prev != nil {
 		// Note: fragments from any preceding revisions of the blob do not matter
 		// in this context, as they weren't accessible to the update operations for this blob

@@ -31,11 +31,32 @@ func DownloadAppendBlob(
 		return nil, err
 	}
 
-	// TODO
-	_ = client
-	panic("not implemented")
+	common, err := downloadCommon(ctx, *client.BlobClient())
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	offset := uint64(0)
+	size := common.ContentSize
+
+	if prev != nil {
+		offset = prev.Common().ContentSize
+		size -= offset
+	}
+
+	blob := &AppendBlob{
+		CommonBlob: *common,
+		Fragments: &AppendBlobFragment{
+			LastChunk: []byte{}, // TODO: Download!
+			Previous:  nil,
+		},
+	}
+
+	if prev != nil {
+		blob.Fragments.Previous = prev.Fragments
+	}
+
+	return blob, nil
 }
 
 func (*AppendBlob) Type() azcontainer.BlobType {

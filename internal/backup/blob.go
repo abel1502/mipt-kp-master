@@ -74,3 +74,14 @@ func DownloadBlob(
 
 	panic(fmt.Sprintf("invalid blob type: %v", blobType))
 }
+
+func downloadCommon(
+	ctx context.Context,
+	client azblob.Client,
+) (*CommonBlob, error) {
+	// TODO
+
+	panic("not implemented")
+
+	return &CommonBlob{}, nil
+}
