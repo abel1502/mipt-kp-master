@@ -3,6 +3,7 @@ package backup
 import (
 	"context"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
@@ -31,11 +32,41 @@ func DownloadBlockBlob(
 		return nil, err
 	}
 
-	// TODO
-	_ = client
-	panic("not implemented")
+	blockList, err := client.GetBlockList(ctx, blockblob.BlockListTypeCommitted, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	blob := &BlockBlob{
+		CommonBlob: CommonBlob{
+			// TODO: Get from azure!
+		},
+		Fragments: make([]*BlockBlobFragment, 0, len(blockList.CommittedBlocks)),
+	}
+
+	knownFragments := make(map[string]*BlockBlobFragment)
+
+	if prev != nil {
+		// Note: fragments from any preceding revisions of the blob do not matter
+		// in this context, as they weren't accessible to the update operations for this blob
+		for _, fragment := range prev.Fragments {
+			knownFragments[fragment.ID] = fragment
+		}
+	}
+
+	for _, block := range blockList.CommittedBlocks {
+		fragment, ok := knownFragments[*block.Name]
+		if !ok {
+			fragment = &BlockBlobFragment{
+				ID:      *block.Name,
+				Content: []byte{}, // TODO: Download!
+			}
+		}
+
+		blob.Fragments = append(blob.Fragments, fragment)
+	}
+
+	return blob, nil
 }
 
 func (*BlockBlob) Type() azcontainer.BlobType {

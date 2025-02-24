@@ -55,6 +55,7 @@
 
 # TODO
 
+- Support offloading content onto the filesystem immediately to not waste RAM!
 - Write the text in Typst in this repository (compile locally), so that we have
   a diff of it.
 - Prepare for the MIPT conference. Ideally want to have working code this week.
