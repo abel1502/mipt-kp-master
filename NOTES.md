@@ -40,6 +40,18 @@
   useful to optimize some of the incremental backups. There's also ETag matching
 - Blobs retain some information about being copied via Azure's inbuilt means.
   This may be useful for incremental backups.
+- Container-wide snapshots aren't provided by Azure. We have to resort to
+  making snapshots of individual blobs. The problems with this are:
+  - If someone updates one of the blobs while we're in the process of creating
+    the online snapshot, we cannot attribute a single timestamp to it. We may
+    either ignore this issue or retry in such cases.
+  - If someone deletes a blob after we've made an online snapshot but before
+    we're done downloading everything, the blob's snapshots are automatically
+    deleted alongside the original. We may, in theory, lock blobs for the
+    duration of the backup, or we may also simply ignore this edge case, since
+    a blob which was immediately deleted afterwards probably wasn't a valuable
+    addition to the backup in the first place. Note that snapshots cannot be
+    locked (leased).
 
 # TODO
 
