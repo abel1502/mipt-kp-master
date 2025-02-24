@@ -1,26 +1,20 @@
 package backup
 
 import (
+	"context"
+	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+	"github.com/abel1502/mipt-kp-m-test/internal/azure"
 )
 
-// TODO: Split into different files?
-
 type Blob interface {
-	Type() BlobType
+	Type() azcontainer.BlobType
 	Common() *CommonBlob
 	ShallowClone() Blob
 }
-
-type BlobType string
-
-const (
-	BlobTypeAppend BlobType = "AppendBlob"
-	BlobTypeBlock  BlobType = "BlockBlob"
-	BlobTypePage   BlobType = "PageBlob"
-)
 
 type CommonBlob struct {
 	// Name is the name of the blob
@@ -40,6 +34,43 @@ type CommonBlob struct {
 	ContentSize uint64
 	// Metadata is the blob metadata
 	Metadata map[string]string
+	// TODO: Store too?
 	// Properties are the blob properties
-	Properties container.BlobProperties // TODO: Remove?
+	// Properties container.BlobProperties
+}
+
+func DownloadBlob(
+	ctx context.Context,
+	client *azcontainer.Client,
+	blobInfo azure.BlobInfo,
+	blobType azcontainer.BlobType,
+	oldBlob Blob,
+) (Blob, error) {
+	switch blobType {
+	case azblob.BlobTypeAppendBlob:
+		oldBlob, ok := oldBlob.(*AppendBlob)
+		if !ok {
+			return nil, fmt.Errorf("invalid old blob type: want AppendBlob, got %T", oldBlob)
+		}
+		blob, err := DownloadAppendBlob(ctx, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		return blob, err
+
+	case azblob.BlobTypeBlockBlob:
+		oldBlob, ok := oldBlob.(*BlockBlob)
+		if !ok {
+			return nil, fmt.Errorf("invalid old blob type: want BlockBlob, got %T", oldBlob)
+		}
+		blob, err := DownloadBlockBlob(ctx, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		return blob, err
+
+	case azblob.BlobTypePageBlob:
+		oldBlob, ok := oldBlob.(*PageBlob)
+		if !ok {
+			return nil, fmt.Errorf("invalid old blob type: want PageBlob, got %T", oldBlob)
+		}
+		blob, err := DownloadPageBlob(ctx, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		return blob, err
+	}
+
+	panic(fmt.Sprintf("invalid blob type: %v", blobType))
 }

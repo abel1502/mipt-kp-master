@@ -5,7 +5,6 @@ import (
 	"slices"
 	"time"
 
-	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/abel1502/mipt-kp-m-test/internal/azure"
 )
@@ -47,17 +46,21 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 		lastRevision := &r.Revisions[len(r.Revisions)-1]
 
 		for _, blob := range lastRevision.Blobs {
-			// TODO: This may be wrong -- if so, do &lastRevision.Blobs[i] instead
 			oldBlobLookup[blob.Common().Name] = blob
 		}
 	}
 
-	// TODO
 	blobs := make([]Blob, 0, len(onlineSnapshot.Blobs))
 
-	for _, blob := range onlineSnapshot.Blobs {
+	for _, blobInfo := range onlineSnapshot.Blobs {
 		// TODO: Also compare LastModified against TakenAt
-		newBlob, err := backupBlob(ctx, client, blob, oldBlobLookup[blob.Name])
+		// Note: If the (online) blob snapshot was modified after
+		// the (online) container snapshot was started,
+		// we should abort the process and try again.
+		// Also note that, if the blob is deleted before we've
+		// finished backing it up, the snapshot is deleted too.
+
+		newBlob, err := backupBlob(ctx, client, blobInfo, oldBlobLookup[blobInfo.Name])
 		if err != nil {
 			return err
 		}
@@ -72,15 +75,18 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	return nil
 }
 
-// TODO: Naming might be confusing here, maybe refactor
-// Note: oldBlob may be nil, meaning this blob hasn't been backed up in the last revision
-func backupBlob(ctx context.Context, client *azcontainer.Client, newBlob azure.BlobInfo, oldBlob Blob) (Blob, error) {
-	newBlobClient, err := client.NewBlobClient(newBlob.Name).WithSnapshot(newBlob.Snapshot)
+func backupBlob(
+	ctx context.Context,
+	client *azcontainer.Client,
+	newBlobInfo azure.BlobInfo,
+	oldBlob Blob,
+) (Blob, error) {
+	newBlobClient, err := client.NewBlobClient(newBlobInfo.Name).WithSnapshot(newBlobInfo.Snapshot)
 	if err != nil {
 		return nil, err
 	}
 
-	newProps, err := newBlobClient.GetProperties(ctx, nil)
+	newBlobProps, err := newBlobClient.GetProperties(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -90,33 +96,19 @@ func backupBlob(ctx context.Context, client *azcontainer.Client, newBlob azure.B
 	// 1. The blob is created fresh.
 	//    The old one is either overwritten (different creation time)
 	//    or didn't exist (nil)
-	if oldBlob == nil || (oldBlob.Common().Timestamps.CreatedAt != *newProps.CreationTime) {
-		blob, err := blobFullDownload(ctx, newBlobClient)
+	if oldBlob == nil || (oldBlob.Common().Timestamps.CreatedAt != *newBlobProps.CreationTime) {
+		blob, err := DownloadBlob(ctx, client, newBlobInfo, *newBlobProps.BlobType, nil)
 		return blob, err
 	}
 
 	// 2. The blob is unchanged since last time.
 	// TODO: This doesn't account for changed metadata! Perhaps also see LastModified?
-	if slices.Equal(oldBlob.Common().ContentMD5, newProps.ContentMD5) {
+	if slices.Equal(oldBlob.Common().ContentMD5, newBlobProps.ContentMD5) {
 		blob := oldBlob.ShallowClone()
 		return blob, nil
 	}
 
 	// 3. The blob is updated in a known way
-	blob, err := blobIncrementalDownload(ctx, newBlobClient, oldBlob)
+	blob, err := DownloadBlob(ctx, client, newBlobInfo, *newBlobProps.BlobType, oldBlob)
 	return blob, err
-}
-
-func blobFullDownload(ctx context.Context, blobClient *azblob.Client) (Blob, error) {
-	// TODO
-	panic("not implemented")
-
-	return nil, nil
-}
-
-func blobIncrementalDownload(ctx context.Context, blobClient *azblob.Client, oldBlob Blob) (Blob, error) {
-	// TODO
-	panic("not implemented")
-
-	return nil, nil
 }

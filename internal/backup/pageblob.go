@@ -1,5 +1,11 @@
 package backup
 
+import (
+	"context"
+
+	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+)
+
 type PageBlob struct {
 	CommonBlob
 	// Fragments is the list of this blob's pages
@@ -18,8 +24,27 @@ type PageBlobFragment struct {
 	ContentMD5 []byte
 }
 
-func (*PageBlob) Type() BlobType {
-	return BlobTypePage
+func DownloadPageBlob(
+	ctx context.Context,
+	contClient *azcontainer.Client,
+	name string,
+	snapshot string,
+	prev *PageBlob,
+) (*PageBlob, error) {
+	client, err := contClient.NewPageBlobClient(name).WithSnapshot(snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO
+	_ = client
+	panic("not implemented")
+
+	return nil, nil
+}
+
+func (*PageBlob) Type() azcontainer.BlobType {
+	return azcontainer.BlobTypePageBlob
 }
 
 func (p *PageBlob) Common() *CommonBlob {

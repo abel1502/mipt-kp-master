@@ -1,5 +1,11 @@
 package backup
 
+import (
+	"context"
+
+	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+)
+
 type BlockBlob struct {
 	CommonBlob
 	// Fragments is the list of blocks that make up the blob
@@ -13,8 +19,27 @@ type BlockBlobFragment struct {
 	Content []byte
 }
 
-func (*BlockBlob) Type() BlobType {
-	return BlobTypeBlock
+func DownloadBlockBlob(
+	ctx context.Context,
+	contClient *azcontainer.Client,
+	name string,
+	snapshot string,
+	prev *BlockBlob,
+) (*BlockBlob, error) {
+	client, err := contClient.NewBlockBlobClient(name).WithSnapshot(snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO
+	_ = client
+	panic("not implemented")
+
+	return nil, nil
+}
+
+func (*BlockBlob) Type() azcontainer.BlobType {
+	return azcontainer.BlobTypeBlockBlob
 }
 
 func (b *BlockBlob) Common() *CommonBlob {

@@ -77,11 +77,7 @@ func TakeSnapshot(ctx context.Context, client *container.Client) (*ContainerSnap
 			return nil, err
 		}
 
-		result.Blobs = append(result.Blobs, struct {
-			Name         string
-			Snapshot     string
-			LastModified time.Time
-		}{
+		result.Blobs = append(result.Blobs, BlobInfo{
 			Name:         *blob.Name,
 			Snapshot:     *snapshotResp.Snapshot,
 			LastModified: *snapshotResp.LastModified,
