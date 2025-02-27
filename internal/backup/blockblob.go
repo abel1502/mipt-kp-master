@@ -3,6 +3,7 @@ package backup
 import (
 	"context"
 
+	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
@@ -56,6 +57,8 @@ func DownloadBlockBlob(
 		}
 	}
 
+	offset := uint64(0)
+
 	for _, block := range blockList.CommittedBlocks {
 		fragment, ok := knownFragments[*block.Name]
 		if !ok {
@@ -63,14 +66,21 @@ func DownloadBlockBlob(
 				ID:      *block.Name,
 				Content: make([]byte, *block.Size),
 			}
-			
-			_, err := client.DownloadBuffer(ctx, fragment.Content, nil)
+
+			_, err := client.DownloadBuffer(ctx, fragment.Content, &azblob.DownloadBufferOptions{
+				Range: azblob.HTTPRange{
+					Offset: int64(offset),
+					Count:  int64(len(fragment.Content)),
+				},
+			})
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		blob.Fragments = append(blob.Fragments, fragment)
+
+		offset += uint64(len(fragment.Content))
 	}
 
 	return blob, nil
