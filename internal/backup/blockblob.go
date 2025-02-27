@@ -61,7 +61,12 @@ func DownloadBlockBlob(
 		if !ok {
 			fragment = &BlockBlobFragment{
 				ID:      *block.Name,
-				Content: []byte{}, // TODO: Download!
+				Content: make([]byte, *block.Size),
+			}
+			
+			_, err := client.DownloadBuffer(ctx, fragment.Content, nil)
+			if err != nil {
+				return nil, err
 			}
 		}
 
