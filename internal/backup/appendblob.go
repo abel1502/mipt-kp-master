@@ -3,6 +3,7 @@ package backup
 import (
 	"context"
 
+	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
@@ -47,9 +48,19 @@ func DownloadAppendBlob(
 	blob := &AppendBlob{
 		CommonBlob: *common,
 		Fragments: &AppendBlobFragment{
-			LastChunk: []byte{}, // TODO: Download!
+			LastChunk: make([]byte, size),
 			Previous:  nil,
 		},
+	}
+
+	_, err = client.DownloadBuffer(ctx, blob.Fragments.LastChunk, &azblob.DownloadBufferOptions{
+		Range: azblob.HTTPRange{
+			Offset: int64(offset),
+			Count:  int64(size),
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	if prev != nil {
