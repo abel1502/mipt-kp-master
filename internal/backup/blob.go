@@ -14,6 +14,7 @@ type Blob interface {
 	Type() azcontainer.BlobType
 	Common() *CommonBlob
 	ShallowClone() Blob
+	// TODO: Save/Load metadata to disk; restore references to fragments?
 }
 
 type CommonBlob struct {
