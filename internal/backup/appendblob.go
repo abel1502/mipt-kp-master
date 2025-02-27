@@ -31,7 +31,7 @@ func DownloadAppendBlob(
 		return nil, err
 	}
 
-	common, err := downloadCommon(ctx, *client.BlobClient())
+	common, err := downloadCommon(ctx, client.BlobClient())
 	if err != nil {
 		return nil, err
 	}

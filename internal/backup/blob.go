@@ -77,7 +77,7 @@ func DownloadBlob(
 
 func downloadCommon(
 	ctx context.Context,
-	client azblob.Client,
+	client *azblob.Client,
 ) (*CommonBlob, error) {
 	// TODO
 
