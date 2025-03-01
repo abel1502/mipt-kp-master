@@ -19,27 +19,26 @@ type Blob interface {
 
 type CommonBlob struct {
 	// Name is the name of the blob
-	Name string
+	Name string `json:"name"`
 	// Timestamps stores various timestamps related to the blob
 	Timestamps struct {
 		// TODO: More?
-		CreatedAt   time.Time
-		SavedAt     time.Time
-		LastUpdated time.Time
-	}
+		CreatedAt   time.Time `json:"created_at"`
+		SavedAt     time.Time `json:"saved_at"`
+		LastUpdated time.Time `json:"last_updated"`
+	} `json:"timestamps"`
 	// ContentMD5 is the MD5 hash of the blob content
-	ContentMD5 []byte
+	ContentMD5 []byte `json:"content_md5"`
 	// ETag is a tag that is updated when the blob is modified in any way
-	ETag string
+	ETag string `json:"etag"`
 	// ContentSize is the total size of the blob
-	ContentSize uint64
+	ContentSize uint64 `json:"content_size"`
 	// Metadata is the blob metadata
-	Metadata map[string]*string
+	Metadata map[string]*string `json:"metadata"`
 	// TODO: Also include?
 	// Tags are the blob tags
-	// Tags []string
-	// Properties are the blob properties
-	// Properties container.BlobProperties
+	// Tags []string `json:"tags"`
+	// TODO: Even more properties?
 }
 
 func DownloadBlob(
