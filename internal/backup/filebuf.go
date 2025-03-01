@@ -18,9 +18,9 @@ func NewFileBuf(contentMD5 []byte, size uint64) *FileBuf {
 	}
 }
 
-func (f *FileBuf) RelPath() string {
+func (f *FileBuf) Path(base string) string {
 	// TODO: Do I need this separation by the first byte?
-	return path.Join("files", f.ID[:2], f.ID)
+	return path.Join(base, "files", f.ID[:2], f.ID)
 }
 
 func (f *FileBuf) MD5() []byte {

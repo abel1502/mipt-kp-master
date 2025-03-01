@@ -2,11 +2,16 @@ package backup
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"log"
 	"os"
 	"path"
 	"slices"
 	"time"
 
+	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/abel1502/mipt-kp-m-test/internal/azure"
 )
@@ -14,22 +19,22 @@ import (
 type Repository struct {
 	// ContainerURL is the URL of the container to back up
 	ContainerURL string
-	// Revisions are the container snapshots in the chronological order.
-	// Note that different revisions in a repository might share some
-	// of the blob content pieces.
-	Revisions []Snapshot
 	// LocalPath is the path to the repository's root directory on the local filesystem.
 	// FileBufs are stored in the "files" subdirectory (binary files);
 	// Snapshots are stored in the "snapshots" subdirectory (json files);
 	// Repository-wide metadata is stored in an "info.json" file.
 	LocalPath string
+	// Revisions are the container snapshots in the chronological order.
+	// Note that different revisions in a repository might share some
+	// of the blob content pieces.
+	Revisions []Snapshot
 }
 
 func NewRepository(containerURL string, localPath string) *Repository {
 	return &Repository{
 		ContainerURL: containerURL,
-		Revisions:    nil,
 		LocalPath:    localPath,
+		Revisions:    nil,
 	}
 }
 
@@ -76,8 +81,8 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 
 	snapshot := Snapshot{
 		SavedAt:   onlineSnapshot.TakenAt,
-		Blobs:     make([]Blob, 0, len(onlineSnapshot.Blobs)),
 		IndexPath: snapshotPath,
+		Blobs:     make(BlobList, 0, len(onlineSnapshot.Blobs)),
 	}
 
 	for _, blobInfo := range onlineSnapshot.Blobs {
@@ -141,4 +146,52 @@ func backupBlob(
 	return blob, err
 }
 
-// TODO: Lookup/download FileBufs
+func (r *Repository) DownloadBlobRangeAsFileBuf(
+	ctx context.Context,
+	client *azblob.Client,
+	offset uint64,
+	size uint64,
+) (*FileBuf, error) {
+	if size > 4*1024*1024 {
+		// TODO: Perhaps correct somehow? Worst case, we'll need to download and recompute everything, which is unpleasant
+		log.Printf("Warning: Attempt to download large blob range (%v bytes). ContentMD5 might not work in these scenarios.", size)
+	}
+
+	stream, err := client.DownloadStream(ctx, &azblob.DownloadStreamOptions{
+		Range: azblob.HTTPRange{
+			Offset: int64(offset),
+			Count:  int64(size),
+		},
+		// Why do they even need a *bool?
+		RangeGetContentMD5: func(b bool) *bool { return &b }(true),
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer stream.Body.Close()
+
+	contentMD5 := stream.ContentMD5
+
+	if uint64(*stream.ContentLength) != size {
+		panic(fmt.Sprintf("unexpected returned size: want %v, got %v", size, *stream.ContentLength))
+	}
+
+	fb := NewFileBuf(contentMD5, size)
+	file, err := os.OpenFile(fb.Path(r.LocalPath), os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
+	if errors.Is(err, os.ErrExist) {
+		return fb, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, stream.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return fb, nil
+}
+
+// TODO: Manual garbage collection for FileBufs!
