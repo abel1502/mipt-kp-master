@@ -45,7 +45,7 @@ func DownloadPageBlob(
 		return nil, err
 	}
 
-	commonBlob, err := downloadCommon(ctx, client.BlobClient())
+	commonBlob, err := downloadCommon(ctx, client.BlobClient(), name)
 	if err != nil {
 		return nil, err
 	}

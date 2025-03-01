@@ -34,8 +34,10 @@ type CommonBlob struct {
 	// ContentSize is the total size of the blob
 	ContentSize uint64
 	// Metadata is the blob metadata
-	Metadata map[string]string
-	// TODO: Store too?
+	Metadata map[string]*string
+	// TODO: Also include?
+	// Tags are the blob tags
+	// Tags []string
 	// Properties are the blob properties
 	// Properties container.BlobProperties
 }
@@ -79,10 +81,31 @@ func DownloadBlob(
 func downloadCommon(
 	ctx context.Context,
 	client *azblob.Client,
+	name string,
 ) (*CommonBlob, error) {
-	// TODO
+	props, err := client.GetProperties(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	panic("not implemented")
+	result := &CommonBlob{
+		Name:       name,
+		ContentMD5: props.ContentMD5,
+		ETag:       string(*props.ETag),
+		Metadata:   props.Metadata,
+	}
 
-	return &CommonBlob{}, nil
+	result.Timestamps.CreatedAt = *props.CreationTime
+	result.Timestamps.LastUpdated = *props.LastModified
+	result.Timestamps.SavedAt = time.Now() // TODO: ?
+
+	stream, err := client.DownloadStream(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer stream.Body.Close()
+
+	result.ContentSize = uint64(*stream.ContentLength)
+
+	return result, nil
 }
