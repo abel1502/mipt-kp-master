@@ -102,7 +102,9 @@ func downloadCommon(
 	if err != nil {
 		return nil, err
 	}
-	defer stream.Body.Close()
+	// We don't actually care about the body at all,
+	// might as well close it right away to not waste the traffic
+	stream.Body.Close()
 
 	result.ContentSize = uint64(*stream.ContentLength)
 
