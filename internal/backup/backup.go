@@ -39,6 +39,9 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	}
 
 	onlineSnapshot, err := azure.TakeSnapshot(ctx, client)
+	if err != nil {
+		return err
+	}
 	defer onlineSnapshot.Delete(ctx) // TODO: Other context?
 
 	oldBlobLookup := make(map[string]Blob)
