@@ -2,6 +2,7 @@ package backup
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,27 +19,91 @@ import (
 
 type Repository struct {
 	// ContainerURL is the URL of the container to back up
-	ContainerURL string
+	ContainerURL string `json:"container_url"`
 	// LocalPath is the path to the repository's root directory on the local filesystem.
 	// FileBufs are stored in the "files" subdirectory (binary files);
 	// Snapshots are stored in the "snapshots" subdirectory (json files);
 	// Repository-wide metadata is stored in an "info.json" file.
-	LocalPath string
+	LocalPath string `json:"local_path"`
 	// Revisions are the container snapshots in the chronological order.
 	// Note that different revisions in a repository might share some
 	// of the blob content pieces.
-	Revisions []Snapshot
+	Revisions []Snapshot `json:"-"`
 }
 
-func NewRepository(containerURL string, localPath string) *Repository {
-	return &Repository{
+func NewRepository(containerURL string, localPath string) (*Repository, error) {
+	err := os.MkdirAll(localPath, 0755)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &Repository{
 		ContainerURL: containerURL,
 		LocalPath:    localPath,
 		Revisions:    nil,
 	}
+
+	err = result.save()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
-// TODO: Open repository
+func OpenRepository(localPath string) (*Repository, error) {
+	result := &Repository{
+		LocalPath: localPath,
+	}
+
+	err := result.load()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *Repository) save() error {
+	metadataFile, err := os.Create(path.Join(r.LocalPath, "info.json"))
+	if err != nil {
+		return err
+	}
+	defer metadataFile.Close()
+
+	encoder := json.NewEncoder(metadataFile)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(r)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Save snapshots
+
+	return nil
+}
+
+func (r *Repository) load() error {
+	metadataFile, err := os.Open(path.Join(r.LocalPath, "info.json"))
+	if err != nil {
+		return err
+	}
+	defer metadataFile.Close()
+
+	decoder := json.NewDecoder(metadataFile)
+	err = decoder.Decode(r)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Load snapshots
+
+	return nil
+}
+
+func (r *Repository) Close() error {
+	return r.save()
+}
 
 func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	success := false
@@ -93,8 +158,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 		// Also note that, if the blob is deleted before we've
 		// finished backing it up, the snapshot is deleted too.
 
-		// TODO: Also pass repository object to enable storing FileBufs directly to fs
-		newBlob, err := backupBlob(ctx, client, blobInfo, oldBlobLookup[blobInfo.Name])
+		newBlob, err := r.backupBlob(ctx, client, blobInfo, oldBlobLookup[blobInfo.Name])
 		if err != nil {
 			return err
 		}
@@ -108,7 +172,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	return nil
 }
 
-func backupBlob(
+func (r *Repository) backupBlob(
 	ctx context.Context,
 	client *azcontainer.Client,
 	newBlobInfo azure.BlobInfo,
@@ -130,7 +194,7 @@ func backupBlob(
 	//    The old one is either overwritten (different creation time)
 	//    or didn't exist (nil)
 	if oldBlob == nil || (oldBlob.Common().Timestamps.CreatedAt != *newBlobProps.CreationTime) {
-		blob, err := DownloadBlob(ctx, client, newBlobInfo, *newBlobProps.BlobType, nil)
+		blob, err := DownloadBlob(ctx, r, client, newBlobInfo, *newBlobProps.BlobType, nil)
 		return blob, err
 	}
 
@@ -142,7 +206,7 @@ func backupBlob(
 	}
 
 	// 3. The blob is updated in a known way
-	blob, err := DownloadBlob(ctx, client, newBlobInfo, *newBlobProps.BlobType, oldBlob)
+	blob, err := DownloadBlob(ctx, r, client, newBlobInfo, *newBlobProps.BlobType, oldBlob)
 	return blob, err
 }
 

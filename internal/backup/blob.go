@@ -43,6 +43,7 @@ type CommonBlob struct {
 
 func DownloadBlob(
 	ctx context.Context,
+	repo *Repository,
 	client *azcontainer.Client,
 	blobInfo azure.BlobInfo,
 	blobType azcontainer.BlobType,
@@ -54,7 +55,7 @@ func DownloadBlob(
 		if !ok {
 			return nil, fmt.Errorf("invalid old blob type: want AppendBlob, got %T", oldBlob)
 		}
-		blob, err := DownloadAppendBlob(ctx, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		blob, err := DownloadAppendBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
 		return blob, err
 
 	case azblob.BlobTypeBlockBlob:
@@ -62,7 +63,7 @@ func DownloadBlob(
 		if !ok {
 			return nil, fmt.Errorf("invalid old blob type: want BlockBlob, got %T", oldBlob)
 		}
-		blob, err := DownloadBlockBlob(ctx, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		blob, err := DownloadBlockBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
 		return blob, err
 
 	case azblob.BlobTypePageBlob:
@@ -70,7 +71,7 @@ func DownloadBlob(
 		if !ok {
 			return nil, fmt.Errorf("invalid old blob type: want PageBlob, got %T", oldBlob)
 		}
-		blob, err := DownloadPageBlob(ctx, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		blob, err := DownloadPageBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
 		return blob, err
 	}
 

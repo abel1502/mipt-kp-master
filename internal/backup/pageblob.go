@@ -2,10 +2,7 @@ package backup
 
 import (
 	"context"
-	"io"
-	"slices"
 
-	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/pageblob"
 )
@@ -23,13 +20,14 @@ type PageBlobFragment struct {
 	// Offset is the fragment offset (512-bytes-aligned)
 	Offset uint64
 	// Content is the fragment data (512-bytes-aligned in size)
-	Content []byte
+	Content *FileBuf
 	// ContentMD5 is the MD5 hash of the fragment
 	ContentMD5 []byte
 }
 
 func DownloadPageBlob(
 	ctx context.Context,
+	repo *Repository,
 	contClient *azcontainer.Client,
 	name string,
 	snapshot string,
@@ -55,44 +53,25 @@ func DownloadPageBlob(
 		Fragments:  make([]*PageBlobFragment, 0, len(pages)),
 	}
 
-	knownFragments := make(map[uint64]*PageBlobFragment)
+	/*knownFragments := make(map[uint64]*PageBlobFragment)
 	if prev != nil {
 		// TODO: unlike blob blocks, here we might be interested in fragments from previous
 		// versions of the blob. Also, perhaps look up based on MD5 instead of the offset?
 		for _, fragment := range prev.Fragments {
 			knownFragments[fragment.Offset] = fragment
 		}
-	}
+	}*/
 
 	for _, page := range pages {
-		stream, err := client.DownloadStream(ctx, &azblob.DownloadStreamOptions{
-			Range: azblob.HTTPRange{
-				Offset: int64(page.Offset),
-				Count:  int64(page.Size),
-			},
-			// TODO: This, apparently, only works for <4MB ranges!
-			// Why do they even need a *bool?
-			RangeGetContentMD5: func(b bool) *bool { return &b }(true),
-		})
+		fb, err := repo.DownloadBlobRangeAsFileBuf(ctx, client.BlobClient(), page.Offset, page.Size)
 		if err != nil {
 			return nil, err
 		}
-		defer stream.Body.Close()
 
-		fragment, ok := knownFragments[page.Offset]
-		ok = ok && len(fragment.Content) == int(*stream.ContentLength)
-		ok = ok && slices.Equal(fragment.ContentMD5, stream.ContentMD5)
-		if !ok {
-			fragment = &PageBlobFragment{
-				Offset:     page.Offset,
-				Content:    make([]byte, *stream.ContentLength),
-				ContentMD5: stream.ContentMD5,
-			}
-
-			_, err := io.ReadFull(stream.Body, fragment.Content)
-			if err != nil {
-				return nil, err
-			}
+		fragment := &PageBlobFragment{
+			Offset:     page.Offset,
+			Content:    fb,
+			ContentMD5: fb.MD5(),
 		}
 
 		blob.Fragments = append(blob.Fragments, fragment)

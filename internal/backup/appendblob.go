@@ -3,7 +3,6 @@ package backup
 import (
 	"context"
 
-	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
@@ -15,13 +14,14 @@ type AppendBlob struct {
 
 type AppendBlobFragment struct {
 	// LastChunk is the last chunk of this blob
-	LastChunk []byte
+	LastChunk *FileBuf
 	// Previous is the preceding fragment
 	Previous *AppendBlobFragment
 }
 
 func DownloadAppendBlob(
 	ctx context.Context,
+	repo *Repository,
 	contClient *azcontainer.Client,
 	name string,
 	snapshot string,
@@ -45,22 +45,17 @@ func DownloadAppendBlob(
 		size -= offset
 	}
 
+	fb, err := repo.DownloadBlobRangeAsFileBuf(ctx, client.BlobClient(), offset, size)
+	if err != nil {
+		return nil, err
+	}
+
 	blob := &AppendBlob{
 		CommonBlob: *common,
 		Fragments: &AppendBlobFragment{
-			LastChunk: make([]byte, size),
+			LastChunk: fb,
 			Previous:  nil,
 		},
-	}
-
-	_, err = client.DownloadBuffer(ctx, blob.Fragments.LastChunk, &azblob.DownloadBufferOptions{
-		Range: azblob.HTTPRange{
-			Offset: int64(offset),
-			Count:  int64(size),
-		},
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if prev != nil {

@@ -55,10 +55,10 @@
 
 # TODO
 
-- Support offloading content onto the filesystem immediately to not waste RAM!
 - Actually, with the above implemented, we might not need to store fragments
   by pointer anymore; That used to be a deduplication feature, but on second
   thought, the filesystem and MD5 hashes works much better for that purpose
+- Support exporting files from snapshots. Allow using glob patterns.
 - Write the text in Typst in this repository (compile locally), so that we have
   a diff of it.
 - Prepare for the MIPT conference. Ideally want to have working code this week.

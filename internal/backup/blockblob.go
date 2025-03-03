@@ -3,7 +3,6 @@ package backup
 import (
 	"context"
 
-	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
@@ -18,11 +17,12 @@ type BlockBlobFragment struct {
 	// ID is the base64-encoded block ID
 	ID string
 	// Content is the block data
-	Content []byte
+	Content *FileBuf
 }
 
 func DownloadBlockBlob(
 	ctx context.Context,
+	repo *Repository,
 	contClient *azcontainer.Client,
 	name string,
 	snapshot string,
@@ -62,25 +62,20 @@ func DownloadBlockBlob(
 	for _, block := range blockList.CommittedBlocks {
 		fragment, ok := knownFragments[*block.Name]
 		if !ok {
-			fragment = &BlockBlobFragment{
-				ID:      *block.Name,
-				Content: make([]byte, *block.Size),
-			}
-
-			_, err := client.DownloadBuffer(ctx, fragment.Content, &azblob.DownloadBufferOptions{
-				Range: azblob.HTTPRange{
-					Offset: int64(offset),
-					Count:  int64(len(fragment.Content)),
-				},
-			})
+			fb, err := repo.DownloadBlobRangeAsFileBuf(ctx, client.BlobClient(), offset, uint64(*block.Size))
 			if err != nil {
 				return nil, err
+			}
+
+			fragment = &BlockBlobFragment{
+				ID:      *block.Name,
+				Content: fb,
 			}
 		}
 
 		blob.Fragments = append(blob.Fragments, fragment)
 
-		offset += uint64(len(fragment.Content))
+		offset += fragment.Content.Size
 	}
 
 	return blob, nil
