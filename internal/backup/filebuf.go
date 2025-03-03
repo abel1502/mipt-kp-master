@@ -3,7 +3,7 @@ package backup
 import (
 	"encoding/hex"
 	"fmt"
-	"path"
+	"path/filepath"
 )
 
 type FileBuf struct {
@@ -20,7 +20,7 @@ func NewFileBuf(contentMD5 []byte, size uint64) *FileBuf {
 
 func (f *FileBuf) Path(base string) string {
 	// TODO: Do I need this separation by the first byte?
-	return path.Join(base, "files", f.ID[:2], f.ID)
+	return filepath.Join(base, "files", f.ID[:2], f.ID)
 }
 
 func (f *FileBuf) MD5() []byte {

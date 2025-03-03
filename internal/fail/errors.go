@@ -5,8 +5,7 @@ import (
 )
 
 var (
-// TODO
-// Err... = new("...")
+// TODO: Err... = new("...")
 )
 
 func new(desc string) error {

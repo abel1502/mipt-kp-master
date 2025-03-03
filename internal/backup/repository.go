@@ -8,7 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -65,7 +65,7 @@ func OpenRepository(localPath string) (*Repository, error) {
 }
 
 func (r *Repository) save() error {
-	metadataFile, err := os.Create(path.Join(r.LocalPath, "info.json"))
+	metadataFile, err := os.Create(filepath.Join(r.LocalPath, "info.json"))
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (r *Repository) save() error {
 }
 
 func (r *Repository) load() error {
-	metadataFile, err := os.Open(path.Join(r.LocalPath, "info.json"))
+	metadataFile, err := os.Open(filepath.Join(r.LocalPath, "info.json"))
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (r *Repository) load() error {
 		return err
 	}
 
-	snapshotDirs, err := os.ReadDir(path.Join(r.LocalPath, "snapshots"))
+	snapshotDirs, err := os.ReadDir(filepath.Join(r.LocalPath, "snapshots"))
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (r *Repository) load() error {
 	r.Revisions = nil
 	for _, snapshotIndex := range snapshotDirs {
 		snapshot := Snapshot{
-			IndexPath: path.Join(r.LocalPath, "snapshots", snapshotIndex.Name()),
+			IndexPath: filepath.Join(r.LocalPath, "snapshots", snapshotIndex.Name()),
 		}
 
 		err = snapshot.load()
@@ -151,12 +151,12 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 		}
 	}
 
-	snapshotPath := path.Join(
+	snapshotPath := filepath.Join(
 		r.LocalPath,
 		"snapshots",
 		onlineSnapshot.TakenAt.Format(time.RFC3339)+".json",
 	)
-	err = os.MkdirAll(path.Dir(snapshotPath), 0755)
+	err = os.MkdirAll(filepath.Dir(snapshotPath), 0755)
 	if err != nil {
 		return err
 	}

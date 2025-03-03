@@ -1,45 +1,21 @@
 package main
 
 import (
-	"context"
-	"flag"
+	"log"
+	"os"
+	"path/filepath"
 
-	"github.com/abel1502/mipt-kp-m-test/internal"
+	"github.com/abel1502/mipt-kp-m-test/internal/app"
 )
 
 func main() {
-	var containerName = flag.String("container", "mycontainer", "Container name")
-	var blobName = flag.String("blob", "", "Blob name (empty for whole container backup)")
-	var keepSnapshot = flag.Bool("keep", false, "Keep snapshot(s) in cloud")
-	flag.Parse()
-
-	err := doMain(*containerName, *blobName, *keepSnapshot)
+	appName, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
-}
 
-func doMain(
-	containerName string,
-	blobName string,
-	keepSnapshot bool,
-) error {
-	backup, err := internal.NewDefaultAzureContainerBackup(containerName)
+	err = app.MakeCmdRoot(filepath.Base(appName)).Execute()
 	if err != nil {
-		return err
+		log.Fatalf("Error: %v", err)
 	}
-
-	if blobName != "" {
-		err := backup.BackupBlob(context.Background(), blobName, "", keepSnapshot)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := backup.BackupAll(context.Background(), containerName, keepSnapshot)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
