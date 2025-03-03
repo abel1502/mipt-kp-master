@@ -120,3 +120,5 @@ func (s *Snapshot) load() error {
 
 	return nil
 }
+
+// TODO: Export files into regular FS by a glob
