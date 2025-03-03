@@ -78,7 +78,12 @@ func (r *Repository) save() error {
 		return err
 	}
 
-	// TODO: Save snapshots
+	for _, snapshot := range r.Revisions {
+		err = snapshot.save()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -96,7 +101,25 @@ func (r *Repository) load() error {
 		return err
 	}
 
-	// TODO: Load snapshots
+	snapshotDirs, err := os.ReadDir(path.Join(r.LocalPath, "snapshots"))
+	if err != nil {
+		return err
+	}
+
+	r.Revisions = nil
+	for _, snapshotIndex := range snapshotDirs {
+		snapshot := Snapshot{
+			IndexPath: path.Join(r.LocalPath, "snapshots", snapshotIndex.Name()),
+		}
+
+		err = snapshot.load()
+		if err != nil {
+			log.Printf("Warning: Failed to load snapshot %q: %v", snapshot.IndexPath, err)
+			continue
+		}
+
+		r.Revisions = append(r.Revisions, snapshot)
+	}
 
 	return nil
 }

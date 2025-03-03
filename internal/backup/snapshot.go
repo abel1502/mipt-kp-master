@@ -3,6 +3,7 @@ package backup
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
@@ -79,6 +80,43 @@ func (l *BlobList) UnmarshalJSON(data []byte) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (s *Snapshot) save() error {
+	indexFile, err := os.Create(s.IndexPath)
+	if err != nil {
+		return err
+	}
+	defer indexFile.Close()
+
+	encoder := json.NewEncoder(indexFile)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(s)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Maybe do something with filebufs?
+
+	return nil
+}
+
+func (s *Snapshot) load() error {
+	indexFile, err := os.Open(s.IndexPath)
+	if err != nil {
+		return err
+	}
+	defer indexFile.Close()
+
+	decoder := json.NewDecoder(indexFile)
+	err = decoder.Decode(s)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Maybe do something with filebufs?
 
 	return nil
 }
