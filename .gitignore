@@ -26,3 +26,7 @@ go.work.sum
 
 .vscode
 /run_azurite.ps1
+__azurite_*
+__blobstorage__
+__queuestorage__
+__tablestorage__

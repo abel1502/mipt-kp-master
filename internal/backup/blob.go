@@ -51,27 +51,39 @@ func DownloadBlob(
 ) (Blob, error) {
 	switch blobType {
 	case azblob.BlobTypeAppendBlob:
-		oldBlob, ok := oldBlob.(*AppendBlob)
-		if !ok {
-			return nil, fmt.Errorf("invalid old blob type: want AppendBlob, got %T", oldBlob)
+		oldBlobTyped, ok := oldBlob.(*AppendBlob)
+		// Note: if oldBlob was nil, the cast apparently fails, so we account for it here
+		if oldBlob == nil {
+			ok = true
 		}
-		blob, err := DownloadAppendBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		if !ok {
+			return nil, fmt.Errorf("invalid old blob type: want *backup.AppendBlob, got %T", oldBlob)
+		}
+		blob, err := DownloadAppendBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlobTyped)
 		return blob, err
 
 	case azblob.BlobTypeBlockBlob:
-		oldBlob, ok := oldBlob.(*BlockBlob)
-		if !ok {
-			return nil, fmt.Errorf("invalid old blob type: want BlockBlob, got %T", oldBlob)
+		oldBlobTyped, ok := oldBlob.(*BlockBlob)
+		// Note: if oldBlob was nil, the cast apparently fails, so we account for it here
+		if oldBlob == nil {
+			ok = true
 		}
-		blob, err := DownloadBlockBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		if !ok {
+			return nil, fmt.Errorf("invalid old blob type: want *backup.BlockBlob, got %T", oldBlob)
+		}
+		blob, err := DownloadBlockBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlobTyped)
 		return blob, err
 
 	case azblob.BlobTypePageBlob:
-		oldBlob, ok := oldBlob.(*PageBlob)
-		if !ok {
-			return nil, fmt.Errorf("invalid old blob type: want PageBlob, got %T", oldBlob)
+		oldBlobTyped, ok := oldBlob.(*PageBlob)
+		// Note: if oldBlob was nil, the cast apparently fails, so we account for it here
+		if oldBlob == nil {
+			ok = true
 		}
-		blob, err := DownloadPageBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlob)
+		if !ok {
+			return nil, fmt.Errorf("invalid old blob type: want *backup.PageBlob, got %T", oldBlob)
+		}
+		blob, err := DownloadPageBlob(ctx, repo, client, blobInfo.Name, blobInfo.Snapshot, oldBlobTyped)
 		return blob, err
 	}
 

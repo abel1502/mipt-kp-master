@@ -16,6 +16,9 @@
     and then rewrite the old blob with a new one, consisting of the specified
     chunks in the specified order. This is very friendly towards incremental
     backups.
+    - As it turns out, when a block blob is uploaded in a single operation,
+      it will not have any blocks associated with its contents. This has to be
+      handled separately.
   - Page blobs must be 512-bytes aligned in size, but they support random access
     rewrites of these 512-byte blocks. For incremental backups, we may,
     in theory, only store the information of what blocks have been added,
@@ -63,3 +66,4 @@
   a diff of it.
 - Prepare for the MIPT conference. Ideally want to have working code this week.
 - The next step would be to deduplicate beyond azure-level fragments.
+- Remove `mkcert` root CA afterwards!

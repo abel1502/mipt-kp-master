@@ -5,6 +5,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+	"github.com/abel1502/mipt-kp-m-test/internal/azure"
 )
 
 type BlockBlob struct {
@@ -41,6 +42,16 @@ func DownloadBlockBlob(
 	commonBlob, err := downloadCommon(ctx, client.BlobClient(), name)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(blockList.CommittedBlocks) == 0 && commonBlob.ContentSize != 0 {
+		// This is possible if the blob was uploaded in a single request.
+		// It is roughly equivalent to the blob consisting of a single block.
+
+		blockList.CommittedBlocks = []*blockblob.Block{{
+			Name: azure.Addressof(""),
+			Size: azure.Addressof(int64(commonBlob.ContentSize)),
+		}}
 	}
 
 	blob := &BlockBlob{

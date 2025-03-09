@@ -12,9 +12,9 @@ import (
 type Snapshot struct {
 	// SavedAt is the time at which this container backup was taken
 	SavedAt time.Time `json:"saved_at"`
-	// LocalPath is the path to the snapshot's index file.
+	// IndexFile is the path to the snapshot's index file.
 	// The composition of the saved blobs is saved there, but not the actual contents
-	IndexPath string `json:"-"`
+	IndexFile string `json:"-"`
 	// Blobs is the list of all blobs included in this backup
 	Blobs BlobList `json:"blobs"`
 }
@@ -85,7 +85,7 @@ func (l *BlobList) UnmarshalJSON(data []byte) error {
 }
 
 func (s *Snapshot) save() error {
-	indexFile, err := os.Create(s.IndexPath)
+	indexFile, err := os.Create(s.IndexFile)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (s *Snapshot) save() error {
 }
 
 func (s *Snapshot) load() error {
-	indexFile, err := os.Open(s.IndexPath)
+	indexFile, err := os.Open(s.IndexFile)
 	if err != nil {
 		return err
 	}

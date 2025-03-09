@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"time"
 
 	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
@@ -24,7 +23,7 @@ type Repository struct {
 	// FileBufs are stored in the "files" subdirectory (binary files);
 	// Snapshots are stored in the "snapshots" subdirectory (json files);
 	// Repository-wide metadata is stored in an "info.json" file.
-	LocalPath string `json:"local_path"`
+	LocalPath string `json:"-"`
 	// Revisions are the container snapshots in the chronological order.
 	// Note that different revisions in a repository might share some
 	// of the blob content pieces.
@@ -78,6 +77,15 @@ func (r *Repository) save() error {
 		return err
 	}
 
+	err = os.MkdirAll(filepath.Join(r.LocalPath, "snapshots"), 0755)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(filepath.Join(r.LocalPath, "files"), 0755)
+	if err != nil {
+		return err
+	}
+
 	for _, snapshot := range r.Revisions {
 		err = snapshot.save()
 		if err != nil {
@@ -109,12 +117,12 @@ func (r *Repository) load() error {
 	r.Revisions = nil
 	for _, snapshotIndex := range snapshotDirs {
 		snapshot := Snapshot{
-			IndexPath: filepath.Join(r.LocalPath, "snapshots", snapshotIndex.Name()),
+			IndexFile: filepath.Join(r.LocalPath, "snapshots", snapshotIndex.Name()),
 		}
 
 		err = snapshot.load()
 		if err != nil {
-			log.Printf("Warning: Failed to load snapshot %q: %v", snapshot.IndexPath, err)
+			log.Printf("Warning: Failed to load snapshot %q: %v", snapshot.IndexFile, err)
 			continue
 		}
 
@@ -154,7 +162,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	snapshotPath := filepath.Join(
 		r.LocalPath,
 		"snapshots",
-		onlineSnapshot.TakenAt.Format(time.RFC3339)+".json",
+		onlineSnapshot.TakenAt.Format("20060102150405")+".json",
 	)
 	err = os.MkdirAll(filepath.Dir(snapshotPath), 0755)
 	if err != nil {
@@ -169,7 +177,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 
 	snapshot := Snapshot{
 		SavedAt:   onlineSnapshot.TakenAt,
-		IndexPath: snapshotPath,
+		IndexFile: snapshotPath,
 		Blobs:     make(BlobList, 0, len(onlineSnapshot.Blobs)),
 	}
 
@@ -189,6 +197,7 @@ func (r *Repository) TakeSnapshot(ctx context.Context) error {
 	}
 
 	r.Revisions = append(r.Revisions, snapshot)
+	fmt.Printf("!! Saved snapshot %q\n", snapshot.IndexFile)
 
 	success = true
 
@@ -249,8 +258,7 @@ func (r *Repository) DownloadBlobRangeAsFileBuf(
 			Offset: int64(offset),
 			Count:  int64(size),
 		},
-		// Why do they even need a *bool?
-		RangeGetContentMD5: func(b bool) *bool { return &b }(true),
+		RangeGetContentMD5: azure.Addressof(true),
 	})
 	if err != nil {
 		return nil, err
@@ -264,6 +272,12 @@ func (r *Repository) DownloadBlobRangeAsFileBuf(
 	}
 
 	fb := NewFileBuf(contentMD5, size)
+
+	err = os.MkdirAll(filepath.Dir(fb.Path(r.LocalPath)), 0755)
+	if err != nil {
+		return nil, err
+	}
+
 	file, err := os.OpenFile(fb.Path(r.LocalPath), os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if errors.Is(err, os.ErrExist) {
 		return fb, nil
