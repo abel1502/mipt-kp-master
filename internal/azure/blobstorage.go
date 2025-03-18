@@ -103,6 +103,7 @@ func (c *ContainerSnapshot) Delete(ctx context.Context) {
 }
 
 func OpenClient(containerURL string) (*container.Client, error) {
+	// For local testing, assume localhost means azurite
 	if strings.HasPrefix(containerURL, "http://127.0.0.1") {
 		parsedURL, err := url.Parse(containerURL)
 		if err != nil {

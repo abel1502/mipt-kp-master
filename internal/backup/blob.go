@@ -3,6 +3,7 @@ package backup
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	azblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
@@ -14,6 +15,7 @@ type Blob interface {
 	Type() azcontainer.BlobType
 	Common() *CommonBlob
 	ShallowClone() Blob
+	Export(ctx context.Context, repo *Repository) io.ReadCloser
 	// TODO: Save/Load metadata to disk; restore references to fragments?
 }
 

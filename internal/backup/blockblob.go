@@ -2,6 +2,7 @@ package backup
 
 import (
 	"context"
+	"io"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
@@ -98,6 +99,16 @@ func (*BlockBlob) Type() azcontainer.BlobType {
 
 func (b *BlockBlob) Common() *CommonBlob {
 	return &b.CommonBlob
+}
+
+func (b *BlockBlob) Export(ctx context.Context, repo *Repository) io.ReadCloser {
+	fragments := make([]io.ReadCloser, 0, len(b.Fragments))
+
+	for _, fragment := range b.Fragments {
+		fragments = append(fragments, fragment.Content.LazyReader(repo.LocalPath))
+	}
+
+	return ChainReader(fragments...)
 }
 
 func (b *BlockBlob) ShallowClone() Blob {

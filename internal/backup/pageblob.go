@@ -2,6 +2,7 @@ package backup
 
 import (
 	"context"
+	"io"
 
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/pageblob"
@@ -112,6 +113,51 @@ func (*PageBlob) Type() azcontainer.BlobType {
 
 func (p *PageBlob) Common() *CommonBlob {
 	return &p.CommonBlob
+}
+
+type padding struct {
+	size uint64
+}
+
+func (p *padding) Read(p2 []byte) (int, error) {
+	taken := min(len(p2), int(p.size))
+	for i := 0; i < taken; i++ {
+		p2[i] = 0
+	}
+
+	p.size -= uint64(taken)
+
+	if taken < len(p2) {
+		return taken, io.EOF
+	}
+
+	return taken, nil
+}
+
+func (p *padding) Close() error {
+	p.size = 0
+	return nil
+}
+
+var _ io.ReadCloser = (*padding)(nil)
+
+func (p *PageBlob) Export(ctx context.Context, repo *Repository) io.ReadCloser {
+	// Note: this assumes the page ranges are sorted, but not necessarily contiguous
+
+	// Ideally we assume no padding is necessary. If not, we'll
+	readers := make([]io.ReadCloser, 0, len(p.Fragments))
+	lastOffset := uint64(0)
+
+	for _, fragment := range p.Fragments {
+		if fragment.Offset > lastOffset {
+			readers = append(readers, &padding{size: fragment.Offset - lastOffset})
+			lastOffset = fragment.Offset
+		}
+		readers = append(readers, fragment.Content.LazyReader(repo.LocalPath))
+		lastOffset += fragment.Content.Size
+	}
+
+	return ChainReader(readers...)
 }
 
 func (p *PageBlob) ShallowClone() Blob {
