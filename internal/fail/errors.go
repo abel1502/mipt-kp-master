@@ -5,7 +5,7 @@ import (
 )
 
 var (
-// TODO: Err... = new("...")
+	ErrNoSnapshots = new("no snapshots made in this repository")
 )
 
 func new(desc string) error {

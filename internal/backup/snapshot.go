@@ -1,12 +1,18 @@
 package backup
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"os"
+	"path"
+	"path/filepath"
 	"time"
 
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+	"github.com/gobwas/glob"
 )
 
 type Snapshot struct {
@@ -122,3 +128,43 @@ func (s *Snapshot) load() error {
 }
 
 // TODO: Export files into regular FS by a glob
+func (s *Snapshot) ExportByGlob(
+	ctx context.Context,
+	repo *Repository,
+	targets glob.Glob,
+	destination string,
+	flat bool,
+) error {
+	for _, blob := range s.Blobs {
+		blobName := blob.Common().Name
+
+		if !targets.Match(blobName) {
+			continue
+		}
+
+		var dstPath string
+		if flat {
+			dstPath = filepath.Join(destination, path.Base(blobName))
+		} else {
+			dstPath = filepath.Join(destination, filepath.FromSlash(blobName))
+		}
+
+		blobReader := blob.Export(ctx, repo)
+		defer blobReader.Close()
+
+		outWriter, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer outWriter.Close()
+
+		_, err = io.Copy(outWriter, blobReader)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Exported %q to %q", blobName, dstPath)
+	}
+
+	return nil
+}

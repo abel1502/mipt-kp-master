@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/abel1502/mipt-kp-m-test/internal/backup"
+	"github.com/abel1502/mipt-kp-m-test/internal/fail"
+	"github.com/gobwas/glob"
 	"github.com/spf13/cobra"
 )
 
@@ -22,10 +24,14 @@ func MakeCmdRoot(appName string) *cobra.Command {
 		},
 	}
 
+	rootCmd.PersistentFlags().StringVarP(&argDirectory, "directory", "C", ".", "Working directory")
+
 	rootCmd.AddCommand(CmdInit)
+
 	rootCmd.AddCommand(CmdBackup)
 
-	rootCmd.PersistentFlags().StringVarP(&argDirectory, "directory", "C", ".", "Working directory")
+	CmdExport.PersistentFlags().BoolVarP(&argFlat, "flat", "f", false, "Ignore original subdirectories for output files")
+	rootCmd.AddCommand(CmdExport)
 
 	return rootCmd
 }
@@ -84,6 +90,40 @@ var CmdBackup = &cobra.Command{
 		}
 
 		log.Printf("Successfully took a new snapshot")
+
+		return nil
+	},
+}
+
+var argExportFlat bool
+
+// TODO: Support picking a previous snapshot?
+var CmdExport = &cobra.Command{
+	Use:   "export targets_glob destination_path",
+	Short: "Export files from the current repository",
+	Long:  "Export files from the current repository",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		repo, err := backup.OpenRepository(argDirectory)
+		if err != nil {
+			return err
+		}
+		defer repo.Close()
+
+		targets, err := glob.Compile(args[0])
+		if err != nil {
+			return err
+		}
+
+		if len(repo.Revisions) == 0 {
+			return fail.ErrNoSnapshots
+		}
+
+		snapshot := &repo.Revisions[len(repo.Revisions)-1]
+		err = snapshot.ExportByGlob(cmd.Context(), repo, targets, args[1], argExportFlat)
+		if err != nil {
+			return err
+		}
 
 		return nil
 	},
