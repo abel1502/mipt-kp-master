@@ -66,4 +66,55 @@
   a diff of it.
 - Prepare for the MIPT conference. Ideally want to have working code this week.
 - The next step would be to deduplicate beyond azure-level fragments.
-- Remove `mkcert` root CA afterwards!
+- Do we need to keep previous snapshots?
+
+- We minimize both storage and network traffic. First priority is storage,
+  network is secondary. The "true" goal is optimizing costs (will make a nice
+  point in the diploma). To analyze costs, maybe take not only azure, but
+  another cloud provider as well. Ideally would be to come up with a formula
+  with coefficients and minimize it smartly. Also point out that azure is just
+  an example, and the same works in other systems.
+- Metadata is also an overhead
+- Client might want to defend against their own employees (malice, accidents)
+- Work on deduplication
+  - Mentor will send a book on the subject
+  - Obvious idea: slice into chunks, compute hashes
+  - Improvement: instead of fixed-size chunks, use an algebraic expression
+    (polynome modulo / window hash), and slice when hits zero. "Rabin Codes",
+    "Rabin-Carp rolling hash", "Rabin fingerprinting". May ensure an
+    approximate chunk size in advance.
+  - Window size is independent from chunk size.
+  - Compute hash in the window, cut when hash starts with a given number of
+    zero bits. In practice, common hashes are computed much faster than those
+    suggested in Rabin-Carp stuff.
+  - Benchmark different hashes (or find a ready benchmark).
+  - Choice of chunk size isn't trivial (tradeoff between metadata overhead
+    and deduplication efficiency).
+  - How to combine deduplication and encryption? Azure (and other clouds)
+    support asymmetric encryption natively. While making a backup, we don't
+    have access to raw data (?), but deduplication is inefficient. Can we
+    come up with some encryption that would be compatible with deduplication?
+  - Compression --- development of the chunk size question. Chunked data may
+    have a negative effect on compression. It's not trivial to pick algorithms
+    that wouldn't interfere with each other.
+  - Collisions.
+  - Also smaller problems about adapting the techniques to the cloud.
+- Just understanding the API isn't a scientific achievement yet.
+- Put it that the specific vendor is just a sample (solid, popular, good api,
+  etc.), but the same achievements are applicable to other cloud providers.
+- For the slides, focus on questions and perspectives; analyze existing
+  material. Search on google scholar myself and send to the mentor. Present as
+  a work-in-progress.
+- Limits are 7 minutes, 20 slides. Conference is on the 31st. Most likely less
+  slides than that. And the time limit is serious, so aim for 6m30.
+- Try to come up with an abstract cost formula for later optimization.
+  (Dependency on the chunk size in dedup, for instance).
+- Will discuss the slides further. This week (until 23rd), focus on research.
+- Important to point out, why there is room for new developments in the area.
+- Current results: implemented a working prototype for the backup tool.
+- Maybe also plot something related to the backups as another result.
+- No need to show code, discuss details or Azure API in particular.
+- Understanding prior work is key to answering questions.
+- Three points: cost analysis; traditional (alogrithm optimizations) and
+  safety (combination with encryption). Should be a lot of articles in all
+  of them
