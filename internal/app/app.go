@@ -30,7 +30,7 @@ func MakeCmdRoot(appName string) *cobra.Command {
 
 	rootCmd.AddCommand(CmdBackup)
 
-	CmdExport.PersistentFlags().BoolVarP(&argFlat, "flat", "f", false, "Ignore original subdirectories for output files")
+	CmdExport.PersistentFlags().BoolVarP(&argExportFlat, "flat", "f", false, "Ignore original subdirectories for output files")
 	rootCmd.AddCommand(CmdExport)
 
 	return rootCmd
