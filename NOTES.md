@@ -61,10 +61,8 @@
 - Actually, with the above implemented, we might not need to store fragments
   by pointer anymore; That used to be a deduplication feature, but on second
   thought, the filesystem and MD5 hashes works much better for that purpose
-- Support exporting files from snapshots. Allow using glob patterns.
 - Write the text in Typst in this repository (compile locally), so that we have
   a diff of it.
-- Prepare for the MIPT conference. Ideally want to have working code this week.
 - The next step would be to deduplicate beyond azure-level fragments.
 - Do we need to keep previous snapshots?
 
@@ -102,15 +100,8 @@
 - Just understanding the API isn't a scientific achievement yet.
 - Put it that the specific vendor is just a sample (solid, popular, good api,
   etc.), but the same achievements are applicable to other cloud providers.
-- For the slides, focus on questions and perspectives; analyze existing
-  material. Search on google scholar myself and send to the mentor. Present as
-  a work-in-progress.
-- Limits are 7 minutes, 20 slides. Conference is on the 31st. Most likely less
-  slides than that. And the time limit is serious, so aim for 6m30.
 - Try to come up with an abstract cost formula for later optimization.
   (Dependency on the chunk size in dedup, for instance).
-- Will discuss the slides further. This week (until 23rd), focus on research.
-- Important to point out, why there is room for new developments in the area.
 - Current results: implemented a working prototype for the backup tool.
 - Maybe also plot something related to the backups as another result.
 - No need to show code, discuss details or Azure API in particular.
@@ -118,3 +109,8 @@
 - Three points: cost analysis; traditional (alogrithm optimizations) and
   safety (combination with encryption). Should be a lot of articles in all
   of them
+
+- Forget about conference, thankfully!
+- Write a rough summary of technologies in the articles, rough language is
+  alright. Around 1.5 - 2 weeks deadline (until 05.04.2025).
+- Make a typst project in this repo. Move todo list there as well?
