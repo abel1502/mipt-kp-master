@@ -25,8 +25,4 @@ go.work.sum
 .env
 
 .vscode
-/run_azurite.ps1
-__azurite_*
-__blobstorage__
-__queuestorage__
-__tablestorage__
+sandbox
