@@ -98,7 +98,7 @@
   - Collisions.
   - Also smaller problems about adapting the techniques to the cloud.
 - Just understanding the API isn't a scientific achievement yet.
-- Put it that the specific vendor is just a sample (solid, popular, good api,
+- Put it that the specific vendor is just a sample (solid, popular, good API,
   etc.), but the same achievements are applicable to other cloud providers.
 - Try to come up with an abstract cost formula for later optimization.
   (Dependency on the chunk size in dedup, for instance).
@@ -106,7 +106,7 @@
 - Maybe also plot something related to the backups as another result.
 - No need to show code, discuss details or Azure API in particular.
 - Understanding prior work is key to answering questions.
-- Three points: cost analysis; traditional (alogrithm optimizations) and
+- Three points: cost analysis; traditional (algorithm optimizations) and
   safety (combination with encryption). Should be a lot of articles in all
   of them
 
