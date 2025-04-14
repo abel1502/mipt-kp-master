@@ -114,3 +114,8 @@
 - Write a rough summary of technologies in the articles, rough language is
   alright. Around 1.5 - 2 weeks deadline (until 05.04.2025).
 - Make a typst project in this repo. Move todo list there as well?
+
+- First, benchmark chunking. Compare Rabin and different hashes (pick the
+  hardware-boosted ones for my pc, in particular). Deadline is approx. 17.04!
+- Next, prototype a solution with convergent encryption. Don't need
+  proof-of-ownership, as we effectively only have 1 client.
